@@ -1,0 +1,38 @@
+# opencode LanguageAgentRuntime — a cluster-scoped runtime preset.
+# Requires the language-operator chart (which provides the LanguageAgentRuntime
+# CRD) to be installed first.
+
+# Main runtime image — the upstream opencode release (not built by this repo).
+image:
+  repository: ghcr.io/anomalyco/opencode
+  tag: latest
+
+# Init/adapter image built by this repo. Writes /etc/opencode/opencode.jsonc
+# with provider + MCP config derived from the operator's /etc/agent/config.yaml.
+adapter:
+  image:
+    repository: ghcr.io/language-operator/opencode-adapter
+    tag: latest
+    # pullPolicy for the adapter init container. Leave empty to inherit the
+    # cluster default; set to Never in local development.
+    pullPolicy: ""
+
+# Agents using this runtime sit behind the cluster OIDC proxy (when the cluster
+# enables auth).
+auth:
+  enabled: true
+
+# HTTP port opencode web listens on.
+port: 3000
+
+workspace:
+  size: 10Gi
+  mountPath: /workspace
+
+resources:
+  requests:
+    memory: 512Mi
+    cpu: 250m
+  limits:
+    memory: 2Gi
+    cpu: 1000m
