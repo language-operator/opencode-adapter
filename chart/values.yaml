@@ -12,7 +12,7 @@ image:
 adapter:
   image:
     repository: ghcr.io/language-operator/opencode-adapter
-    tag: latest
+    tag: 0.1.2
     pullPolicy: ""
 
 # Agents using this runtime sit behind the cluster OIDC proxy (when the cluster
