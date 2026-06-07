@@ -38,6 +38,13 @@ spec:
   runtime: opencode
 ```
 
+## Authentication
+
+The runtime sets `auth.enabled: true`, so access is gated entirely by the cluster's
+OIDC proxy: when the `LanguageCluster` has auth enabled the operator injects an
+oauth2-proxy sidecar in front of opencode. There is no built-in password — if the
+cluster does not enable auth, opencode is exposed unauthenticated on its ingress.
+
 ## Development
 
 ```bash
