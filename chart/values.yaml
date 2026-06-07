@@ -13,8 +13,6 @@ adapter:
   image:
     repository: ghcr.io/language-operator/opencode-adapter
     tag: latest
-    # pullPolicy for the adapter init container. Leave empty to inherit the
-    # cluster default; set to Never in local development.
     pullPolicy: ""
 
 # Agents using this runtime sit behind the cluster OIDC proxy (when the cluster

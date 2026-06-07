@@ -29,8 +29,12 @@ spec:
     # Pre-seed /workspace as the default project so the picker is bypassed on first launch.
     # opencode db creates and migrates the DB if it doesn't exist yet (fresh PVC).
     # INSERT OR IGNORE is idempotent — safe to run on every pod start.
+    #
+    # The adapter writes /etc/opencode/seed.sh when the agent has instructions; we
+    # background it so it evaluates those instructions as the first prompt once the
+    # web server is up (it retries --attach until ready, idempotent via a PVC sentinel).
     command: ["/bin/sh", "-c"]
-    args: ["opencode db \"INSERT OR IGNORE INTO project (id, worktree, vcs, time_created, time_updated, sandboxes) VALUES ('workspace', '/workspace', null, (strftime('%s','now')*1000), (strftime('%s','now')*1000), '[]')\" 2>/dev/null || true; exec opencode web --hostname 0.0.0.0 --port {{ .Values.port }}"]
+    args: ["opencode db \"INSERT OR IGNORE INTO project (id, worktree, vcs, time_created, time_updated, sandboxes) VALUES ('workspace', '/workspace', null, (strftime('%s','now')*1000), (strftime('%s','now')*1000), '[]')\" 2>/dev/null || true; [ -f /etc/opencode/seed.sh ] && sh /etc/opencode/seed.sh \"http://127.0.0.1:{{ .Values.port }}\" & exec opencode web --hostname 0.0.0.0 --port {{ .Values.port }}"]
 
     initContainers:
       - name: opencode-adapter
