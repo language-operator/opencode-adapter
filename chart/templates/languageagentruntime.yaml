@@ -5,13 +5,15 @@ metadata:
   labels:
     {{- include "opencode.labels" . | nindent 4 }}
 spec:
+  # Single combined image used by both the init container (seed-config.mjs)
+  # and the main container (server.mjs — xterm.js / tmux WebSocket terminal
+  # fronting the opencode TUI).
   image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
 
   # Authentication is handled entirely by the cluster OIDC proxy — this is the
   # sole auth gate. When the cluster enables auth, agents using this runtime sit
-  # behind the injected oauth2-proxy sidecar. opencode itself runs without a
-  # password (OPENCODE_SERVER_PASSWORD unset), so when the cluster does NOT
-  # enable auth the server is exposed unauthenticated on its ingress.
+  # behind the injected oauth2-proxy sidecar. opencode talks to the model gateway
+  # using the provider config in opencode.jsonc; no interactive login is needed.
   auth:
     enabled: {{ .Values.auth.enabled }}
 
@@ -26,32 +28,39 @@ spec:
     mountPath: {{ .Values.workspace.mountPath }}
 
   deployment:
-    # Pre-seed /workspace as the default project so the picker is bypassed on first launch.
-    # opencode db creates and migrates the DB if it doesn't exist yet (fresh PVC).
-    # INSERT OR IGNORE is idempotent — safe to run on every pod start.
-    #
-    # The adapter writes /etc/opencode/seed.sh when the agent has instructions; we
-    # background it so it evaluates those instructions as the first prompt once the
-    # web server is up (it retries --attach until ready, idempotent via a PVC sentinel).
-    command: ["/bin/sh", "-c"]
-    args: ["opencode db \"INSERT OR IGNORE INTO project (id, worktree, vcs, time_created, time_updated, sandboxes) VALUES ('workspace', '/workspace', null, (strftime('%s','now')*1000), (strftime('%s','now')*1000), '[]')\" 2>/dev/null || true; [ -f /etc/opencode/seed.sh ] && sh /etc/opencode/seed.sh \"http://127.0.0.1:{{ .Values.port }}\" & exec opencode web --hostname 0.0.0.0 --port {{ .Values.port }}"]
-
+    {{- if .Values.image.pullPolicy }}
+    imagePullPolicy: {{ .Values.image.pullPolicy }}
+    {{- end }}
+    # The main container runs the image's default entrypoint (server.mjs). On
+    # WebSocket connect it spawns `tmux new-session -A` running launch-opencode,
+    # which opens the opencode TUI bound to /workspace. The agent's instructions,
+    # model, provider, and MCP servers all come from the opencode.jsonc that the
+    # init container writes to the shared /etc/opencode volume.
     initContainers:
       - name: opencode-adapter
-        image: {{ .Values.adapter.image.repository }}:{{ .Values.adapter.image.tag }}
-        {{- if .Values.adapter.image.pullPolicy }}
-        imagePullPolicy: {{ .Values.adapter.image.pullPolicy }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        {{- if .Values.image.pullPolicy }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         {{- end }}
-        # MODEL_ENDPOINT and LLM_MODEL are injected by the operator.
-        # The adapter writes /etc/opencode/opencode.jsonc with provider + MCP config.
+        # Override the image's default entrypoint (which runs the server) so this
+        # init container runs seed-config.mjs once and exits. MODEL_ENDPOINT,
+        # LLM_MODEL, AGENT_NAME, and AGENT_INSTRUCTIONS are injected by the operator.
+        command: ["node", "/app/seed-config.mjs"]
         volumeMounts:
           - name: opencode-config
             mountPath: /etc/opencode
 
+    startupProbe:
+      tcpSocket:
+        port: {{ .Values.port }}
+      initialDelaySeconds: 5
+      periodSeconds: 2
+      timeoutSeconds: 2
+      failureThreshold: 30
+
     livenessProbe:
       tcpSocket:
         port: {{ .Values.port }}
-      initialDelaySeconds: 10
       periodSeconds: 15
       timeoutSeconds: 3
       failureThreshold: 3
@@ -59,7 +68,6 @@ spec:
     readinessProbe:
       tcpSocket:
         port: {{ .Values.port }}
-      initialDelaySeconds: 5
       periodSeconds: 10
       timeoutSeconds: 3
       successThreshold: 1
@@ -72,7 +80,7 @@ spec:
       # SQLite session DB and other opencode state lives under $XDG_DATA_HOME/opencode
       - name: XDG_DATA_HOME
         value: /workspace/.local/share
-      # Bun writes a runtime cache here; root fs is read-only so redirect to workspace
+      # opencode writes a runtime cache here; root fs is read-only so redirect to workspace
       - name: XDG_CACHE_HOME
         value: /workspace/.cache
       # Tell opencode where to find the config written by the init container

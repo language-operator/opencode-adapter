@@ -2,26 +2,22 @@
 # Requires the language-operator chart (which provides the LanguageAgentRuntime
 # CRD) to be installed first.
 
-# Main runtime image — the upstream opencode release (not built by this repo).
+# Combined runtime image built by this repo. Used by both the init container
+# (seed-config.mjs — translates the operator's /etc/agent/config.yaml into
+# opencode's native config) and the main container (server.mjs — the xterm.js /
+# tmux WebSocket terminal that fronts the interactive opencode TUI).
 image:
-  repository: ghcr.io/anomalyco/opencode
-  tag: latest
-
-# Init/adapter image built by this repo. Writes /etc/opencode/opencode.jsonc
-# with provider + MCP config derived from the operator's /etc/agent/config.yaml.
-adapter:
-  image:
-    repository: ghcr.io/language-operator/opencode-adapter
-    tag: 0.1.2
-    pullPolicy: ""
+  repository: ghcr.io/language-operator/opencode-adapter
+  tag: 0.1.2
+  pullPolicy: ""
 
 # Agents using this runtime sit behind the cluster OIDC proxy (when the cluster
 # enables auth).
 auth:
   enabled: true
 
-# HTTP port opencode web listens on.
-port: 3000
+# HTTP port the WebSocket terminal server listens on.
+port: 8080
 
 workspace:
   size: 10Gi

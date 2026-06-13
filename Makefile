@@ -17,7 +17,7 @@ publish: build
 	docker push $(IMAGE):latest
 
 test: build
-	docker run --rm --entrypoint sh $(IMAGE):$(TAG) /app/test.sh
+	docker run --rm --user root --entrypoint sh $(IMAGE):$(TAG) /app/test.sh
 
 # Build, load the adapter image into k3s, and upgrade the runtime release
 # referencing the freshly built image (development inner loop).
@@ -31,14 +31,14 @@ dev: build
 	@# The opencode LanguageAgentRuntime is cluster-scoped and may already exist,
 	@# owned by the umbrella language-operator-runtimes chart. Adopting it into this
 	@# release leaves helm's 3-way merge unable to update the image, so delete it
-	@# first and let helm recreate it fresh with the locally built adapter image.
+	@# first and let helm recreate it fresh with the locally built image.
 	kubectl delete languageagentruntime $(RELEASE) --ignore-not-found --wait
 	helm upgrade --install $(RELEASE) chart \
 		--namespace $(NAMESPACE) \
 		--create-namespace \
-		--set adapter.image.repository=$(IMAGE) \
-		--set-string adapter.image.tag=$(TAG) \
-		--set adapter.image.pullPolicy=Never \
+		--set image.repository=$(IMAGE) \
+		--set-string image.tag=$(TAG) \
+		--set image.pullPolicy=Never \
 		--wait --timeout 2m
 
 # Uninstall the runtime release.

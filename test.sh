@@ -115,16 +115,16 @@ assert "opencode.jsonc still created"    "[ -f /tmp/t4/opencode.jsonc ]"
 assert "autoupdate: false present"       "grep -q 'autoupdate' /tmp/t4/opencode.jsonc"
 
 # ---------------------------------------------------------------------------
-# Test 5: instructions → seed script + default model
+# Test 5: instructions → instructions.md + `instructions` config field
 # ---------------------------------------------------------------------------
-echo "--- Test 5: instructions produce seed script and default model ---"
+echo "--- Test 5: instructions become standing context ---"
 
 set_config << 'EOF'
 agent:
   name: greeter
 instructions: |-
   Say hello and introduce yourself.
-  Mention you are "Claude".
+  Mention you are "opencode".
 models:
   claude-sonnet:
     model: claude-sonnet-4-5
@@ -137,21 +137,18 @@ AGENT_NAME=greeter \
   node /app/seed-config.mjs > /tmp/t5/out.txt 2>&1
 clear_config
 
-assert "default model in opencode.jsonc"   "grep -q '\"model\": \"openai/claude-sonnet-4-5\"' /tmp/t5/opencode.jsonc"
-assert "instructions.txt written"          "[ -f /tmp/t5/instructions.txt ]"
-assert "instructions content verbatim"     "grep -q 'introduce yourself' /tmp/t5/instructions.txt"
-assert "multi-line instructions preserved" "grep -q 'Claude' /tmp/t5/instructions.txt"
-assert "seed.sh written"                    "[ -f /tmp/t5/seed.sh ]"
-assert "seed.sh uses correct model"        "grep -q \"openai/claude-sonnet-4-5\" /tmp/t5/seed.sh"
-assert "seed.sh title from agent name"     "grep -q 'greeter instructions' /tmp/t5/seed.sh"
-assert "seed.sh reads instructions via stdin" "grep -q '< /tmp/t5/instructions.txt' /tmp/t5/seed.sh"
-assert "seed.sh has sentinel guard"        "grep -q 'langop-seeded' /tmp/t5/seed.sh"
-assert "seed.sh binds run to /workspace"   "grep -q 'opencode run.*--dir /workspace' /tmp/t5/seed.sh"
+assert "default model in opencode.jsonc"     "grep -q '\"model\": \"openai/claude-sonnet-4-5\"' /tmp/t5/opencode.jsonc"
+assert "instructions.md written"             "[ -f /tmp/t5/instructions.md ]"
+assert "instructions content verbatim"       "grep -q 'introduce yourself' /tmp/t5/instructions.md"
+assert "multi-line instructions preserved"   "grep -q 'opencode' /tmp/t5/instructions.md"
+assert "instructions config field present"   "grep -q '\"instructions\"' /tmp/t5/opencode.jsonc"
+assert "instructions field points at md"     "grep -q '/tmp/t5/instructions.md' /tmp/t5/opencode.jsonc"
+assert "no leftover seed.sh"                 "[ ! -f /tmp/t5/seed.sh ]"
 
 # ---------------------------------------------------------------------------
-# Test 6: no instructions → no seed script (graceful no-op)
+# Test 6: no instructions → no instructions.md / no config field (graceful no-op)
 # ---------------------------------------------------------------------------
-echo "--- Test 6: no instructions means no seed script ---"
+echo "--- Test 6: no instructions means no standing context ---"
 
 set_config << 'EOF'
 models:
@@ -165,25 +162,23 @@ OPENCODE_CONFIG_DIR=/tmp/t6 \
   node /app/seed-config.mjs > /tmp/t6/out.txt 2>&1
 clear_config
 
-assert "no seed.sh without instructions"   "[ ! -f /tmp/t6/seed.sh ]"
-assert "no instructions.txt"               "[ ! -f /tmp/t6/instructions.txt ]"
-assert "default model still set"           "grep -q 'openai/claude-sonnet-4-5' /tmp/t6/opencode.jsonc"
+assert "no instructions.md"                  "[ ! -f /tmp/t6/instructions.md ]"
+assert "no instructions config field"        "! grep -q '\"instructions\"' /tmp/t6/opencode.jsonc"
+assert "default model still set"             "grep -q 'openai/claude-sonnet-4-5' /tmp/t6/opencode.jsonc"
 
 # ---------------------------------------------------------------------------
-# Test 7: AGENT_INSTRUCTIONS env fallback (config.yaml omits instructions)
+# Test 7: AGENT_INSTRUCTIONS env fallback, and decoupled from model presence
 # ---------------------------------------------------------------------------
-echo "--- Test 7: AGENT_INSTRUCTIONS env fallback ---"
+echo "--- Test 7: AGENT_INSTRUCTIONS env fallback (no model configured) ---"
 
 mkdir -p /tmp/t7
 AGENT_INSTRUCTIONS="Greet the user warmly." \
-  MODEL_ENDPOINT=http://gateway.default.svc.cluster.local:8000 \
-  LLM_MODEL=claude-sonnet-4-5 \
   OPENCODE_CONFIG_DIR=/tmp/t7 \
   node /app/seed-config.mjs > /tmp/t7/out.txt 2>&1
 
-assert "seed.sh from env fallback"         "[ -f /tmp/t7/seed.sh ]"
-assert "instructions.txt from env"         "grep -q 'Greet the user warmly' /tmp/t7/instructions.txt"
-assert "seed.sh model from LLM_MODEL"      "grep -q 'openai/claude-sonnet-4-5' /tmp/t7/seed.sh"
+assert "instructions.md from env"            "[ -f /tmp/t7/instructions.md ]"
+assert "instructions content from env"       "grep -q 'Greet the user warmly' /tmp/t7/instructions.md"
+assert "instructions field set without model" "grep -q '/tmp/t7/instructions.md' /tmp/t7/opencode.jsonc"
 
 # ---------------------------------------------------------------------------
 echo ""
