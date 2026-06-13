@@ -23,10 +23,6 @@ spec:
       protocol: TCP
       expose: true
 
-  workspace:
-    size: {{ .Values.workspace.size }}
-    mountPath: {{ .Values.workspace.mountPath }}
-
   deployment:
     {{- if .Values.image.pullPolicy }}
     imagePullPolicy: {{ .Values.image.pullPolicy }}
