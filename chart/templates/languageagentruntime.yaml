@@ -33,7 +33,8 @@ spec:
     {{- end }}
     # The main container runs the image's default entrypoint (server.mjs). On
     # WebSocket connect it spawns `tmux new-session -A` running launch-opencode,
-    # which opens the opencode TUI bound to /workspace. The agent's instructions,
+    # which opens the opencode TUI bound to AGENT_REPO_DIR (when the agent sets
+    # spec.repository) or /workspace otherwise. The agent's instructions,
     # model, provider, and MCP servers all come from the opencode.jsonc that the
     # init container writes to the shared /etc/opencode volume.
     initContainers:

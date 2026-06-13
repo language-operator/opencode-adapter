@@ -13,7 +13,11 @@ const fitDir = path.dirname(require.resolve('@xterm/addon-fit/package.json'));
 const clipboardDir = path.dirname(require.resolve('@xterm/addon-clipboard/package.json'));
 
 const PORT = Number(process.env.PORT) || 8080;
-const WORKDIR = process.env.OPENCODE_CWD || '/workspace';
+// Where opencode opens. OPENCODE_CWD is the explicit manual override; otherwise
+// AGENT_REPO_DIR (operator-injected when spec.repository git-clones a repo into
+// the workspace) so the runtime operates on the cloned repo. Falls back to
+// /workspace — the default with no behavior change for agents that set neither.
+const WORKDIR = process.env.OPENCODE_CWD || process.env.AGENT_REPO_DIR || '/workspace';
 const AGENT_NAME = process.env.AGENT_NAME || 'agent';
 
 const INDEX_PATH = path.join(appDir, 'index.html');
@@ -66,8 +70,9 @@ wss.on('connection', (ws, req) => {
   // the next reconnect starts a fresh opencode.
   //
   // `launch-opencode` is a thin wrapper that runs the opencode TUI bound to
-  // /workspace; the agent's instructions, model, provider, and MCP servers all
-  // come from $OPENCODE_CONFIG_DIR/opencode.jsonc (written by the init container).
+  // WORKDIR (AGENT_REPO_DIR when set, else /workspace); the agent's instructions,
+  // model, provider, and MCP servers all come from $OPENCODE_CONFIG_DIR/opencode.jsonc
+  // (written by the init container).
   const sessionName = process.env.TMUX_SESSION || 'opencode';
   const term = pty.spawn('tmux', [
     '-f', '/etc/tmux.conf',
