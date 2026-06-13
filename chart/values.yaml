@@ -8,7 +8,7 @@
 # tmux WebSocket terminal that fronts the interactive opencode TUI).
 image:
   repository: ghcr.io/language-operator/opencode-adapter
-  tag: 0.1.2
+  tag: 0.1.3
   pullPolicy: ""
 
 # Agents using this runtime sit behind the cluster OIDC proxy (when the cluster
