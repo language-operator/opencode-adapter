@@ -181,6 +181,15 @@ assert "instructions content from env"       "grep -q 'Greet the user warmly' /t
 assert "instructions field set without model" "grep -q '/tmp/t7/instructions.md' /tmp/t7/opencode.jsonc"
 
 # ---------------------------------------------------------------------------
+# Test 8: vendor CLIs the operator hands tokens to (GH_TOKEN, GITLAB_TOKEN)
+# ---------------------------------------------------------------------------
+echo "--- Test 8: git and vendor CLIs present ---"
+
+assert "git present"                         "git --version"
+assert "gh CLI present"                      "gh --version"
+assert "glab CLI present"                    "glab --version"
+
+# ---------------------------------------------------------------------------
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] || exit 1
