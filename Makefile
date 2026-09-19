@@ -16,17 +16,14 @@ publish: build
 	docker push $(IMAGE):$(TAG)
 	docker push $(IMAGE):latest
 
-# The conformance suite lives in coding-runtime and is fetched at the tag the
-# Dockerfile pins. It runs the image the way the operator does — read-only root,
-# uid 1000, all capabilities dropped — so a failure here is a failure in-cluster.
+# The conformance suite lives in coding-runtime; hack/conformance.sh fetches it
+# at the tag the Dockerfile pins and runs the image the way the operator does —
+# read-only root, uid 1000, all capabilities dropped — so a failure here is a
+# failure in-cluster.
 CODING_RUNTIME_VERSION ?= v0.1.0
 
 test: build
-	@rm -rf .conformance && mkdir -p .conformance
-	curl -fsSL "https://github.com/language-operator/coding-runtime/archive/refs/tags/$(CODING_RUNTIME_VERSION).tar.gz" \
-		| tar -xz --wildcards --strip-components=2 -C .conformance '*/test'
-	chmod +x .conformance/conformance.sh
-	./.conformance/conformance.sh $(IMAGE):$(TAG) adapter
+	CODING_RUNTIME_VERSION=$(CODING_RUNTIME_VERSION) ./hack/conformance.sh $(IMAGE):$(TAG)
 
 # Build, load the adapter image into k3s, and upgrade the runtime release
 # referencing the freshly built image (development inner loop).

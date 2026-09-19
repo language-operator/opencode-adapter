@@ -34,22 +34,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # The suite lives in coding-runtime and is fetched at the pinned tag — the
-      # whole test/ directory rather than just the script, because the terminal
-      # round-trip check bind-mounts a probe out of test/fixture-adapter/.
-      - name: Fetch the conformance suite
-        run: |
-          curl -fsSL "https://github.com/language-operator/coding-runtime/archive/refs/tags/${CODING_RUNTIME_VERSION}.tar.gz" \
-            | tar -xz --wildcards --strip-components=1 '*/test'
-          chmod +x test/conformance.sh
-
-      # Runs the image under the posture the operator imposes and an adapter
-      # cannot override: read-only root, uid 1000, all capabilities dropped,
-      # tmpfs /tmp. Checks doctor, that seeding is idempotent and writes nothing
-      # outside /tmp and /workspace, the probe endpoints, manifest redaction, the
-      # cross-origin WebSocket guard, and a keystroke round-tripping through tmux.
+      # Fetches the shared suite at the pinned tag and runs the image under the
+      # posture the operator imposes and an adapter cannot override: read-only
+      # root, uid 1000, all capabilities dropped, tmpfs /tmp. Checks doctor, that
+      # seeding is idempotent and writes nothing outside /tmp and /workspace, the
+      # probe endpoints, manifest redaction, and the cross-origin WebSocket guard.
+      # See the script for the one check it tolerates, and why.
       - name: Run conformance suite
-        run: ./test/conformance.sh opencode-adapter:test adapter
+        run: ./hack/conformance.sh opencode-adapter:test
 
   chart-lint:
     runs-on: ubuntu-latest
