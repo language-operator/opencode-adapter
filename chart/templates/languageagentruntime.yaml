@@ -5,9 +5,9 @@ metadata:
   labels:
     {{- include "opencode.labels" . | nindent 4 }}
 spec:
-  # Single combined image used by both the init container (seed-config.mjs)
-  # and the main container (server.mjs — xterm.js / tmux WebSocket terminal
-  # fronting the opencode TUI).
+  # Built on coding-runtime, which owns the OS layer, the web terminal and the
+  # /etc/agent/config.yaml ETL. This repo adds the opencode CLI plus a manifest
+  # (/etc/coding-runtime/runtime.json), an emitter and a launcher.
   image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
 
   # Authentication is handled entirely by the cluster OIDC proxy — this is the
@@ -27,28 +27,24 @@ spec:
     {{- if .Values.image.pullPolicy }}
     imagePullPolicy: {{ .Values.image.pullPolicy }}
     {{- end }}
-    # The main container runs the image's default entrypoint (server.mjs). On
-    # WebSocket connect it spawns `tmux new-session -A` running launch-opencode,
-    # which opens the opencode TUI bound to AGENT_REPO_DIR (when the agent sets
-    # spec.repository) or /workspace otherwise. The agent's instructions,
-    # model, provider, and MCP servers all come from the opencode.jsonc that the
-    # init container writes to the shared /etc/opencode volume.
-    initContainers:
-      - name: opencode-adapter
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-        {{- if .Values.image.pullPolicy }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        {{- end }}
-        # Override the image's default entrypoint (which runs the server) so this
-        # init container runs seed-config.mjs once and exits. MODEL_ENDPOINT,
-        # LLM_MODEL, AGENT_NAME, and AGENT_INSTRUCTIONS are injected by the operator.
-        command: ["node", "/app/seed-config.mjs"]
-        volumeMounts:
-          - name: opencode-config
-            mountPath: /etc/opencode
+    # The container runs the base entrypoint: resolve the environment, seed
+    # config, then serve. Seeding runs here rather than in an init container
+    # because the operator mounts /tmp into the agent container only, so an init
+    # container shares no writable path with it — and the normalized config is a
+    # pure function of /etc/agent/config.yaml plus the environment, both of which
+    # are already present here. On WebSocket connect the base spawns
+    # `tmux new-session -A` running launch-opencode, in AGENT_REPO_DIR when the
+    # agent sets spec.repository and /workspace otherwise.
+    #
+    # HOME, the XDG directories and OPENCODE_CONFIG_DIR are all computed by the
+    # base (the last from runtime.json), so none of them are set here.
 
+    # Probe the harness, not just the listener: a TCP probe stays green against a
+    # socket with a dead harness behind it. Not /ping or /ready — oauth2-proxy
+    # v7.6.0 answers both itself, before the upstream ever sees them.
     startupProbe:
-      tcpSocket:
+      httpGet:
+        path: /healthz
         port: {{ .Values.port }}
       initialDelaySeconds: 5
       periodSeconds: 2
@@ -56,14 +52,16 @@ spec:
       failureThreshold: 30
 
     livenessProbe:
-      tcpSocket:
+      httpGet:
+        path: /healthz
         port: {{ .Values.port }}
       periodSeconds: 15
       timeoutSeconds: 3
       failureThreshold: 3
 
     readinessProbe:
-      tcpSocket:
+      httpGet:
+        path: /readyz
         port: {{ .Values.port }}
       periodSeconds: 10
       timeoutSeconds: 3
@@ -71,26 +69,10 @@ spec:
       failureThreshold: 3
 
     env:
-      # The image sets WorkingDir=/ with no HOME; redirect all writable paths to /workspace
-      - name: HOME
-        value: /workspace
-      # SQLite session DB and other opencode state lives under $XDG_DATA_HOME/opencode
-      - name: XDG_DATA_HOME
-        value: /workspace/.local/share
-      # opencode writes a runtime cache here; root fs is read-only so redirect to workspace
-      - name: XDG_CACHE_HOME
-        value: /workspace/.cache
-      # Tell opencode where to find the config written by the init container
-      - name: OPENCODE_CONFIG_DIR
-        value: /etc/opencode
-
-    volumes:
-      - name: opencode-config
-        emptyDir: {}
-
-    volumeMounts:
-      - name: opencode-config
-        mountPath: /etc/opencode
+      # The port the terminal server binds. Without this the server would fall
+      # back to its own default and .Values.port would only move the Service.
+      - name: PORT
+        value: {{ .Values.port | quote }}
 
     resources:
       {{- toYaml .Values.resources | nindent 6 }}
