@@ -17,6 +17,8 @@
 # read-only rootfs, probes, and the cross-origin guard" without mentioning it:
 # the check belongs to the fixture, not to every adapter built on the base.
 #
+# Tracked upstream: https://github.com/language-operator/coding-runtime/issues/4
+#
 # So it is tolerated — by name, and nothing else is. Any other failure fails the
 # run, as does this one disappearing: if the suite starts passing outright, the
 # tolerance below has outlived the upstream limitation and should be deleted.
