@@ -11,7 +11,7 @@
 # version mismatch that is not real.
 # -----------------------------------------------------------------------------
 ARG BASE=ghcr.io/language-operator/coding-runtime:0.1.0@sha256:9ed651b2c661d80622b3c5a15b454b4dffe9cae3bbd7643f21b592690afc4cb9
-ARG OPENCODE_VERSION=1.16.2
+ARG OPENCODE_VERSION=1.18.32
 
 FROM ${BASE}
 ARG OPENCODE_VERSION
