@@ -24,7 +24,10 @@ config. What lives here is the three files that describe opencode to it:
   for every session — no async seeding, no timing.
 - **`launch-opencode.sh`** — what tmux runs. The base has already set the working
   directory (the cloned repo when the agent sets `spec.repository`, else
-  `/workspace`), so it is `exec opencode .`.
+  `/workspace`), so it opens that project directly. It also passes `--continue` once
+  the workspace holds a session store, so an agent that is put to sleep and woken —
+  a new pod, and with it a new tmux server — resumes the conversation rather than
+  opening blank.
 
 One container, running the base entrypoint: resolve the environment, seed config,
 serve. Seeding runs in the agent container rather than an init container because
