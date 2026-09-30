@@ -22,12 +22,10 @@ config ETL all come from here, so this is the security-relevant one.
 | Location | Form |
 |---|---|
 | `Dockerfile` `ARG BASE` | `ghcr.io/language-operator/coding-runtime:X.Y.Z@sha256:…` — tag **and** digest |
-| `.github/workflows/test.yaml` `env.CODING_RUNTIME_VERSION` | `vX.Y.Z` |
-| `Makefile` `CODING_RUNTIME_VERSION ?=` | `vX.Y.Z` |
-| `hack/conformance.sh` `VERSION="${CODING_RUNTIME_VERSION:-…}"` | `vX.Y.Z` |
 
-All four must name the same release. Note the form differs: the image tag has no `v`, the
-git tag does.
+`ARG BASE` is now the only place the base version appears: since base `0.1.1` the
+conformance suite ships inside the image and CI extracts it from the build, so there is no
+separate suite version to keep in step.
 
 **2. The opencode CLI** — `Dockerfile` `ARG OPENCODE_VERSION`, installed as the npm package
 `opencode-ai`.
@@ -48,8 +46,6 @@ is exactly why they get missed. Re-copy and diff them whenever the base moves.
   satisfy — every boot warns about a mismatch that is not real — and which also fails the
   conformance suite's own `reports a version` check, since that asserts semver. Only
   released semver tags.
-- **Move all four `coding-runtime` locations together.** A base bump that leaves
-  `CODING_RUNTIME_VERSION` behind runs the old suite against the new image and looks green.
 - **opencode: take the `latest` dist-tag only.** The package also publishes `next`, `beta`
   and `dev` tags carrying `0.0.0-*` versions; none of them belong in a release image.
 - **Do not unpin anything to make an update easier.** If a pin is in the way, that is the
@@ -141,20 +137,10 @@ record why.
 - **opencode:** update `ARG OPENCODE_VERSION`.
 - **Actions:** update the `uses:` pins.
 
-**6. Check whether the conformance workaround can go.** `hack/conformance.sh` tolerates one
-check by name and fetches the suite from a release tarball. Bases from `0.1.1` onward carry
-the suite in the image and fix the check the tolerance exists for. If the new base does:
-delete `hack/conformance.sh`, and have `test.yaml` and the `Makefile` extract the suite
-instead —
-
-```bash
-docker run --rm --entrypoint cat <the base image you pinned> \
-  /opt/coding-runtime/test/conformance.sh > conformance.sh
-```
-
-— which also guarantees the checks match the runtime being checked. The script's own guard
-fails the build if its tolerated check starts passing, so a green build after a base bump
-does not mean the workaround is still needed; read it.
+**6. Re-read how the suite is obtained.** CI and `make test` extract
+`/opt/coding-runtime/test/conformance.sh` from the built image. If a future base moves or
+renames it, that breaks loudly rather than silently — fix the extraction, do not go back to
+fetching a tag, which is what let the suite drift from the runtime in the first place.
 
 **7. Verify.**
 

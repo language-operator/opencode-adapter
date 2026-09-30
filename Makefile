@@ -7,6 +7,9 @@ TAG       ?= $(GIT_SHA)
 NAMESPACE ?= language-operator
 RELEASE   ?= opencode
 
+# Scratch path for the suite extracted from the image; not checked in.
+CONFORMANCE := .conformance.sh
+
 .PHONY: build publish test dev uninstall help
 
 build:
@@ -16,14 +19,16 @@ publish: build
 	docker push $(IMAGE):$(TAG)
 	docker push $(IMAGE):latest
 
-# The conformance suite lives in coding-runtime; hack/conformance.sh fetches it
-# at the tag the Dockerfile pins and runs the image the way the operator does —
+# The conformance suite ships inside the base, so it is taken out of the image
+# rather than fetched: the checks then match the runtime being checked, and there
+# is no version to keep in step. It runs the image the way the operator does —
 # read-only root, uid 1000, all capabilities dropped — so a failure here is a
 # failure in-cluster.
-CODING_RUNTIME_VERSION ?= v0.1.0
-
 test: build
-	CODING_RUNTIME_VERSION=$(CODING_RUNTIME_VERSION) ./hack/conformance.sh $(IMAGE):$(TAG)
+	docker run --rm --entrypoint cat $(IMAGE):$(TAG) \
+		/opt/coding-runtime/test/conformance.sh > $(CONFORMANCE)
+	chmod +x $(CONFORMANCE)
+	$(CONFORMANCE) $(IMAGE):$(TAG) adapter
 
 # Build, load the adapter image into k3s, and upgrade the runtime release
 # referencing the freshly built image (development inner loop).
