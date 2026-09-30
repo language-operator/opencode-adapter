@@ -85,6 +85,6 @@ helm template opencode chart
 - `release-chart.yaml` — packages `chart/` and pushes it to `oci://ghcr.io/language-operator/charts`.
 - `test.yaml` — builds the image, runs the `coding-runtime` conformance suite against
   it under the operator's posture (read-only root, uid 1000, all capabilities dropped),
-  and lints/templates the chart on every PR. `hack/conformance.sh` fetches the suite
-  at the pinned tag; it also documents the one adapter-mode check that cannot apply to
-  a TUI terminal, which it tolerates by name.
+  and lints/templates the chart on every PR. The suite is taken out of the image rather
+  than fetched, so the checks always match the runtime being checked, and no failures are
+  tolerated.
