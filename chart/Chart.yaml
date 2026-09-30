@@ -2,8 +2,8 @@ apiVersion: v2
 name: opencode
 description: opencode LanguageAgentRuntime for the Language Operator
 type: application
-version: 0.1.5
-appVersion: "0.1.5"
+version: 0.1.6
+appVersion: "0.1.6"
 keywords:
   - ai
   - llm
