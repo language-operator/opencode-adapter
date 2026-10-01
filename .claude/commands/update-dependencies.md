@@ -38,6 +38,15 @@ separate suite version to keep in step.
 `examples/opencode/` in `coding-runtime`. Nothing fails when they drift from upstream, which
 is exactly why they get missed. Re-copy and diff them whenever the base moves.
 
+**5. The `/iterate` command** — `.claude/commands/iterate.md` and the three scripts in
+`.claude/commands/iterate/` are **verbatim copies** from `language-operator` (canonical, see
+language-operator#932), except `iterate.md`'s `allowed-tools` build-tool entries and its
+`## Testing` section, which are marked `<!-- per-repo -->`. These drift the same way the
+files above do, and silently: a stale copy still runs, it just runs the old steps. Re-copy
+the scripts wholesale; for `iterate.md`, lift the two per-repo regions out of the current
+file, re-copy the canonical body, and put them back — then diff against canonical to prove
+nothing else moved.
+
 ## Rules that must not be broken
 
 - **Pin the base by tag *and* digest.** Never `:latest`.
@@ -58,7 +67,11 @@ Stop and report if any precondition fails; do not continue past a failure.
 **1. Preconditions.**
 - On `main`, working tree clean (`git status --porcelain` empty), `git fetch origin` and
   confirm `main` is not behind `origin/main`.
-- Create a branch: `git checkout -b chore/update-dependencies`. Never work on `main`.
+- Create a branch, with something distinctive in the name —
+  `git checkout -b chore/deps-<what-moved>`. Never work on `main`, and do not reuse a
+  bare `chore/update-dependencies`: PRs here are squash-merged, so the old branch survives
+  on the remote and its commits are not ancestors of `main`, which makes the next run's
+  push a non-fast-forward rejection.
 
 **2. Record the current state.** Read every pin listed above and write them down — this is
 the "before" column of the audit trail.
