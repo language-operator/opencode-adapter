@@ -38,6 +38,15 @@ separate suite version to keep in step.
 `examples/opencode/` in `coding-runtime`. Nothing fails when they drift from upstream, which
 is exactly why they get missed. Re-copy and diff them whenever the base moves.
 
+**5. The `/iterate` command** — `.claude/commands/iterate.md` and the three scripts in
+`.claude/commands/iterate/` are **verbatim copies** from `language-operator` (canonical, see
+language-operator#932), except `iterate.md`'s `allowed-tools` build-tool entries and its
+`## Testing` section, which are marked `<!-- per-repo -->`. These drift the same way the
+files above do, and silently: a stale copy still runs, it just runs the old steps. Re-copy
+the scripts wholesale; for `iterate.md`, lift the two per-repo regions out of the current
+file, re-copy the canonical body, and put them back — then diff against canonical to prove
+nothing else moved.
+
 ## Rules that must not be broken
 
 - **Pin the base by tag *and* digest.** Never `:latest`.
