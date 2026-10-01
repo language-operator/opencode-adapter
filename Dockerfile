@@ -10,8 +10,8 @@
 # `requires.codingRuntime` range can satisfy, so every boot would warn about a
 # version mismatch that is not real.
 # -----------------------------------------------------------------------------
-ARG BASE=ghcr.io/language-operator/coding-runtime:0.1.2@sha256:9b3e9e061e369c3ab68936cecbd3ebed37162b7f9994f3424cafa4897b58990f
-ARG OPENCODE_VERSION=1.18.33
+ARG BASE=ghcr.io/language-operator/coding-runtime:0.1.4@sha256:2f31ef9b04e72bec3a4bb79db59a82a4aa74f89538cfc118d75e0a852734b0aa
+ARG OPENCODE_VERSION=1.18.34
 
 FROM ${BASE}
 ARG OPENCODE_VERSION
