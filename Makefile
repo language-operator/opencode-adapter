@@ -10,7 +10,7 @@ RELEASE   ?= opencode
 # Scratch path for the suite extracted from the image; not checked in.
 CONFORMANCE := .conformance.sh
 
-.PHONY: build publish test dev uninstall help
+.PHONY: build publish test lint-chart dev uninstall help
 
 build:
 	docker build -t $(IMAGE):$(TAG) -t $(IMAGE):latest .
@@ -29,6 +29,12 @@ test: build
 		/opt/coding-runtime/test/conformance.sh > $(CONFORMANCE)
 	chmod +x $(CONFORMANCE)
 	$(CONFORMANCE) $(IMAGE):$(TAG) adapter
+
+# Both halves of the chart-lint CI job. claude-code-adapter's target lints only;
+# templating too is what the workflow actually does, so this matches CI instead.
+lint-chart:
+	helm lint chart
+	helm template opencode chart >/dev/null
 
 # Build, load the adapter image into k3s, and upgrade the runtime release
 # referencing the freshly built image (development inner loop).
@@ -60,6 +66,7 @@ help:
 	@echo "Targets:"
 	@echo "  build      - Build the adapter image ($(IMAGE):$(TAG) + :latest)"
 	@echo "  test       - Build, then run the coding-runtime conformance suite"
+	@echo "  lint-chart - helm lint + helm template the chart (the chart-lint CI job)"
 	@echo "  publish    - Build and push $(TAG) + latest to the registry"
 	@echo "  dev        - Build, import into k3s, and upgrade the runtime release (inner loop)"
 	@echo "  uninstall  - Uninstall the runtime release"
