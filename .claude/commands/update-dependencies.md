@@ -67,7 +67,11 @@ Stop and report if any precondition fails; do not continue past a failure.
 **1. Preconditions.**
 - On `main`, working tree clean (`git status --porcelain` empty), `git fetch origin` and
   confirm `main` is not behind `origin/main`.
-- Create a branch: `git checkout -b chore/update-dependencies`. Never work on `main`.
+- Create a branch, with something distinctive in the name —
+  `git checkout -b chore/deps-<what-moved>`. Never work on `main`, and do not reuse a
+  bare `chore/update-dependencies`: PRs here are squash-merged, so the old branch survives
+  on the remote and its commits are not ancestors of `main`, which makes the next run's
+  push a non-fast-forward rejection.
 
 **2. Record the current state.** Read every pin listed above and write them down — this is
 the "before" column of the audit trail.
