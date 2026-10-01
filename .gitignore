@@ -4,4 +4,5 @@ npm-debug.log
 .helm-packages/
 *.tgz
 .claude/settings.json
+.claude/worktrees/
 .conformance.sh
