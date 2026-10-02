@@ -50,6 +50,7 @@ it.
 - Changes to the terminal, the emitter or the manifest are mostly **not** covered by
   anything local — the conformance suite checks the runtime contract, not opencode's
   behaviour. Say so plainly rather than implying a green build proves more than it does.
+- The PR title must be a conventional commit (`feat:`, `fix:`, `chore:`, `docs:`).
 
 ## Build & dev deploy
 
@@ -80,12 +81,26 @@ Bumping the base, the opencode CLI or the GitHub Actions is `/update-dependencie
 
 ## Issue-driven workflow
 
-`/iterate [#issue] [--auto]` (`.claude/commands/iterate.md`) handles **one** issue, from
-selection to a merged PR and a closed issue, then stops. For continuous work, use
-`/loop /iterate`. Work happens inside a git worktree under `.claude/worktrees/`.
+`/iterate [#issue] [--auto]` handles **one** issue, from selection to a merged PR and a
+closed issue, then stops. For continuous work, use `/loop /iterate`. Work happens inside a
+git worktree under `.claude/worktrees/`.
 
-The command body and the scripts in `.claude/commands/iterate/` are copied verbatim from
-`language-operator` (the canonical version, language-operator#932). Only the
-`allowed-tools` build-tool entries and the `## Testing` section are repo-specific, and
-`## Testing` is marked with `<!-- per-repo -->`. Fix drift by re-copying, not by editing
-in place.
+It comes from the shared `langop` plugin in
+[`language-operator/skills`](https://github.com/language-operator/skills), pinned to a tag
+in `.claude/settings.json` — not from a copy in this repo, which is what it replaced.
+`/iterate` and `/langop:iterate` both invoke it. There is nothing per-repo in the skill
+itself: it reads `## Testing` above to learn how to test a change here, so keep that section
+accurate.
+
+Interactive sessions need no install step — the plugin loads at the pinned tag once the folder
+is trusted. Non-interactive ones (`claude -p`, scheduled or in-cluster agents) have no trust
+dialog, so they need this once, with the tag the repo pins:
+
+```bash
+claude plugin marketplace add 'language-operator/skills#v0.1.0'
+claude plugin install langop@language-operator --scope project
+```
+
+Two things to avoid: a marketplace add without `#<tag>` follows `main` rather than the pin,
+and `--scope project` on the *marketplace* add rewrites `.claude/settings.json` and drops
+its `ref`. To take a newer release, change `ref` there.
